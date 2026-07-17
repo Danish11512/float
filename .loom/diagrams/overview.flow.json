@@ -1,83 +1,63 @@
 {
   "version": "1",
   "id": "overview",
-  "title": "floats — Architecture Overview",
-  "description": "MVVM + Repository pattern. SQLite (GRDB) local DB. Background sync engine for cron updates.",
+  "title": "floats — Service Architecture",
+  "description": "Service-oriented vertical stack. API Gateway on top, services stacked vertically, database at bottom. Services reach out horizontally to external APIs.",
   "nodes": [
     {
-      "id": "view",
-      "type": "view",
-      "label": "SwiftUI Views",
+      "id": "api-gateway",
+      "type": "api-gateway",
+      "label": "API Gateway",
       "status": "planned",
-      "position": { "x": 80, "y": 100 },
-      "description": "Presentation layer. Renders state from ViewModel, sends user intents back.",
-      "properties": { "screen": "ContentView + feature views" }
+      "position": { "x": 400, "y": 50 },
+      "description": "Top-level entry point. Routes UI requests to appropriate services. Single access point for all features.",
+      "properties": { "endpoints": "TBD — defined per feature" }
     },
     {
-      "id": "viewmodel",
-      "type": "viewmodel",
-      "label": "ViewModels",
+      "id": "sync-service",
+      "type": "sync-service",
+      "label": "Sync Service",
       "status": "planned",
-      "position": { "x": 380, "y": 100 },
-      "description": "@Observable view models. Hold UI state, call repository, never touch network/DB directly.",
-      "properties": { "state": "@Observable, @MainActor" }
-    },
-    {
-      "id": "repository",
-      "type": "repository",
-      "label": "Repository Layer",
-      "status": "planned",
-      "position": { "x": 680, "y": 100 },
-      "description": "Data access abstraction. Decides local vs remote. Writes local first (offline-first).",
-      "properties": { "entities": "Feature-specific repositories" }
+      "position": { "x": 400, "y": 300 },
+      "description": "Background fetch / cron updater. Runs on BGAppRefreshTask schedule. Reaches out horizontally to external APIs, writes down to database.",
+      "properties": { "schedule": "BGAppRefreshTask (system-managed, 15 min min)", "retry_policy": "exponential backoff, max 6 attempts" }
     },
     {
       "id": "database",
       "type": "database",
       "label": "SQLite Database (GRDB)",
       "status": "planned",
-      "position": { "x": 980, "y": 50 },
-      "description": "On-device persistence via GRDB.swift. Source of truth for offline-first.",
+      "position": { "x": 400, "y": 550 },
+      "description": "Foundation layer. On-device persistence via GRDB.swift. All services read/write here. Source of truth for offline-first.",
       "properties": { "engine": "sqlite", "tables": "TBD — defined per feature" }
     },
     {
-      "id": "sync-engine",
-      "type": "sync-engine",
-      "label": "Sync Engine",
+      "id": "external-api",
+      "type": "external-api",
+      "label": "External API",
       "status": "planned",
-      "position": { "x": 980, "y": 300 },
-      "description": "Background fetch task (BGAppRefreshTask). Pulls remote data on schedule, writes to local DB. Exponential backoff retry.",
-      "properties": { "schedule": "BGAppRefreshTask (system-managed)", "retry_policy": "exponential backoff, max 6 attempts" }
-    },
-    {
-      "id": "api-client",
-      "type": "api-client",
-      "label": "API Client",
-      "status": "planned",
-      "position": { "x": 1280, "y": 175 },
-      "description": "URLSession + async/await. Handles remote fetch for sync engine + repository.",
-      "properties": { "base_url": "TBD" }
+      "position": { "x": 900, "y": 175 },
+      "description": "Remote third-party or backend API. Reached horizontally by API gateway + sync service. URLSession + async/await.",
+      "properties": { "url": "TBD", "auth": "TBD" }
     },
     {
       "id": "model",
       "type": "model",
       "label": "Domain Models",
       "status": "planned",
-      "position": { "x": 1580, "y": 175 },
-      "description": "Sendable structs. Shared across layers. DB records map to these.",
+      "position": { "x": 400, "y": 750 },
+      "description": "Shared Sendable structs. Flow between database, services, and API gateway. Define the data contract across layers.",
       "properties": { "properties": "TBD — defined per feature" }
     }
   ],
   "edges": [
-    { "id": "e1", "from": "view", "to": "viewmodel", "kind": "control", "label": "user intent" },
-    { "id": "e2", "from": "viewmodel", "to": "view", "kind": "data-read", "label": "observed state" },
-    { "id": "e3", "from": "viewmodel", "to": "repository", "kind": "request", "label": "fetch/save" },
-    { "id": "e4", "from": "repository", "to": "database", "kind": "data-write", "label": "local read/write" },
-    { "id": "e5", "from": "repository", "to": "api-client", "kind": "request", "label": "remote fetch (on-demand)" },
-    { "id": "e6", "from": "sync-engine", "to": "api-client", "kind": "request", "label": "scheduled fetch" },
-    { "id": "e7", "from": "sync-engine", "to": "database", "kind": "data-write", "label": "persist update" },
-    { "id": "e8", "from": "api-client", "to": "model", "kind": "data-read", "label": "decode response" },
-    { "id": "e9", "from": "database", "to": "model", "kind": "data-read", "label": "map records" },
-    { "id": "e10", "from": "repository", "to": "model", "kind": "data-read", "label": "return domain types" }
+    { "id": "e1", "from": "api-gateway", "to": "sync-service", "kind": "control", "label": "trigger sync" },
+    { "id": "e2", "from": "sync-service", "to": "database", "kind": "data-write", "label": "persist fetched data" },
+    { "id": "e3", "from": "sync-service", "to": "external-api", "kind": "request", "label": "scheduled fetch" },
+    { "id": "e4", "from": "api-gateway", "to": "external-api", "kind": "request", "label": "on-demand fetch" },
+    { "id": "e5", "from": "api-gateway", "to": "database", "kind": "data-read", "label": "read local data" },
+    { "id": "e6", "from": "database", "to": "model", "kind": "data-read", "label": "map records to domain" },
+    { "id": "e7", "from": "external-api", "to": "model", "kind": "data-read", "label": "decode response to domain" },
+    { "id": "e8", "from": "api-gateway", "to": "model", "kind": "data-read", "label": "return domain types to UI" }
   ]
 }

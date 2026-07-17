@@ -4,60 +4,67 @@
 
 ## Overview
 
-MVVM + Repository pattern. SQLite (GRDB) local DB. Background sync engine for cron updates.
+Service-oriented vertical stack. API Gateway on top, services stacked vertically, database at bottom. Services reach out horizontally to external APIs.
 
-## Layers
+```
+         ┌──────────────┐
+         │  API Gateway  │  ◀── UI entry point
+         └──────┬───────┘
+                │
+         ┌──────▼───────┐
+         │ Sync Service  │  ──▶ External API (horizontal)
+         └──────┬───────┘
+                │
+         ┌──────▼───────┐
+         │   Database    │  ◀── Foundation (SQLite/GRDB)
+         └──────┬───────┘
+                │
+         ┌──────▼───────┐
+         │    Models     │  ◀── Shared domain types
+         └──────────────┘
+```
 
-### SwiftUI Views (`view`)
+## Components
+
+### API Gateway (`api-gateway`)
 - **Status**: planned
-- Presentation layer. Renders state from ViewModel, sends user intents back.
-- Screen: ContentView + feature views
+- Top-level entry point. Routes UI requests to appropriate services. Single access point for all features.
+- Endpoints: TBD — defined per feature
 
-### ViewModels (`viewmodel`)
+### Sync Service (`sync-service`)
 - **Status**: planned
-- @Observable view models. Hold UI state, call repository, never touch network/DB directly.
-- State: @Observable, @MainActor
-
-### Repository Layer (`repository`)
-- **Status**: planned
-- Data access abstraction. Decides local vs remote. Writes local first (offline-first).
-- Entities: Feature-specific repositories
+- Background fetch / cron updater. Runs on BGAppRefreshTask schedule. Reaches out horizontally to external APIs, writes down to database.
+- Schedule: BGAppRefreshTask (system-managed, 15 min min)
+- Retry policy: exponential backoff, max 6 attempts
 
 ### SQLite Database (GRDB) (`database`)
 - **Status**: planned
-- On-device persistence via GRDB.swift. Source of truth for offline-first.
+- Foundation layer. On-device persistence via GRDB.swift. All services read/write here. Source of truth for offline-first.
 - Engine: sqlite
 - Tables: TBD — defined per feature
 
-### Sync Engine (`sync-engine`)
+### External API (`external-api`)
 - **Status**: planned
-- Background fetch task (BGAppRefreshTask). Pulls remote data on schedule, writes to local DB. Exponential backoff retry.
-- Schedule: BGAppRefreshTask (system-managed)
-- Retry policy: exponential backoff, max 6 attempts
-
-### API Client (`api-client`)
-- **Status**: planned
-- URLSession + async/await. Handles remote fetch for sync engine + repository.
-- Base URL: TBD
+- Remote third-party or backend API. Reached horizontally by API gateway + sync service. URLSession + async/await.
+- URL: TBD
+- Auth: TBD
 
 ### Domain Models (`model`)
 - **Status**: planned
-- Sendable structs. Shared across layers. DB records map to these.
+- Shared Sendable structs. Flow between database, services, and API gateway. Define the data contract across layers.
 - Properties: TBD — defined per feature
 
 ## Data Flow
 
 ```
-View ──user intent──▶ ViewModel
-View ◀─observed state── ViewModel
-ViewModel ──fetch/save──▶ Repository
-Repository ──local read/write──▶ SQLite Database (GRDB)
-Repository ──remote fetch (on-demand)──▶ API Client
-Sync Engine ──scheduled fetch──▶ API Client
-Sync Engine ──persist update──▶ SQLite Database (GRDB)
-API Client ──decode response──▶ Domain Models
-SQLite Database (GRDB) ──map records──▶ Domain Models
-Repository ──return domain types──▶ Domain Models
+API Gateway ──trigger sync──▶ Sync Service
+Sync Service ──persist fetched data──▶ Database
+Sync Service ──scheduled fetch──▶ External API
+API Gateway ──on-demand fetch──▶ External API
+API Gateway ──read local data──▶ Database
+Database ──map records to domain──▶ Models
+External API ──decode response to domain──▶ Models
+API Gateway ──return domain types to UI──▶ Models
 ```
 
 ## Folder Structure
@@ -66,7 +73,7 @@ Repository ──return domain types──▶ Domain Models
 Sources/
 ├── floatsApp.swift              # @main entry, registers background fetch
 ├── App/
-│   └── AppFactory.swift         # Dependency injection container
+│   └── AppFactory.swift         # Dependency injection, wires services
 ├── Core/
 │   ├── Database/
 │   │   └── DatabaseManager.swift    # Actor, GRDB wrapper
@@ -77,15 +84,15 @@ Sources/
 │       └── BackgroundFetchScheduler.swift  # BGAppRefreshTask registration
 ├── Models/
 │   └── Model.swift                  # Domain models (Sendable structs)
-├── Features/                        # Feature modules
-├── Repositories/                    # Repository implementations
-└── ViewModels/                      # View models
+└── Services/                        # Service modules (vertical slices)
 ```
 
 ## Key Decisions
 
+- **Service-oriented** — services are primary units, not layers. Each service owns its domain.
+- **Vertical stack** — API Gateway → Services → Database. Top-down dependency flow.
+- **Horizontal outreach** — services reach out sideways to external APIs without going through the stack.
 - **GRDB.swift** (v7.5.0) — SQLite wrapper, 10-20x faster than SwiftData
 - **Actors** for DatabaseManager, APIClient, SyncEngine — Swift 6 strict concurrency safe
 - **BGAppRefreshTask** — system-managed background fetch, 15 min minimum interval
-- **Offline-first** — Repository writes local DB first, sync engine handles remote updates
-- **@Observable** macro — Swift 5.9+, replaces ObservableObject
+- **Offline-first** — Database is source of truth. Sync service updates from external APIs on schedule.

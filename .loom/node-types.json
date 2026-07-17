@@ -1,35 +1,27 @@
 {
   "types": {
-    "view": {
-      "label": "SwiftUI View",
-      "description": "User-facing screen or component (SwiftUI).",
+    "api-gateway": {
+      "label": "API Gateway",
+      "description": "Top-level entry point. Routes requests to services. Sits above all services.",
       "color": "#60a5fa",
-      "icon": "monitor",
+      "icon": "globe",
       "fields": [
-        { "name": "screen", "type": "string", "required": false }
+        { "name": "endpoints", "type": "string", "required": false }
       ]
     },
-    "viewmodel": {
-      "label": "ViewModel",
-      "description": "State management + business logic (@Observable).",
+    "service": {
+      "label": "Service",
+      "description": "Self-contained business domain service. Stacked vertically. Owns its logic, models, and data access.",
       "color": "#34d399",
       "icon": "cpu",
       "fields": [
-        { "name": "state", "type": "string", "required": false }
-      ]
-    },
-    "repository": {
-      "label": "Repository",
-      "description": "Data access abstraction (local + remote).",
-      "color": "#fbbf24",
-      "icon": "database",
-      "fields": [
-        { "name": "entities", "type": "string", "required": false }
+        { "name": "domain", "type": "string", "required": false },
+        { "name": "responsibilities", "type": "string", "required": false }
       ]
     },
     "database": {
-      "label": "Local Database",
-      "description": "On-device persistence (SQLite via GRDB).",
+      "label": "Database",
+      "description": "On-device persistence layer. Foundation at the bottom. Services read/write here.",
       "color": "#a78bfa",
       "icon": "database",
       "fields": [
@@ -37,9 +29,19 @@
         { "name": "tables", "type": "string", "required": false }
       ]
     },
-    "sync-engine": {
-      "label": "Sync Engine",
-      "description": "Background fetch / cron updater with retry + backoff.",
+    "external-api": {
+      "label": "External API",
+      "description": "Third-party or remote service reached out to horizontally from a service.",
+      "color": "#94a3b8",
+      "icon": "globe",
+      "fields": [
+        { "name": "url", "type": "string", "required": false },
+        { "name": "auth", "type": "string", "required": false }
+      ]
+    },
+    "sync-service": {
+      "label": "Sync Service",
+      "description": "Background fetch / cron updater. Reaches out horizontally to external APIs, writes down to database.",
       "color": "#f97316",
       "icon": "refresh-cw",
       "fields": [
@@ -47,18 +49,9 @@
         { "name": "retry_policy", "type": "string", "required": false }
       ]
     },
-    "api-client": {
-      "label": "API Client",
-      "description": "Remote HTTP client (URLSession + async/await).",
-      "color": "#94a3b8",
-      "icon": "globe",
-      "fields": [
-        { "name": "base_url", "type": "string", "required": false }
-      ]
-    },
     "model": {
       "label": "Domain Model",
-      "description": "Core data entity (Sendable struct).",
+      "description": "Shared data entity. Sendable struct. Flows between services and database.",
       "color": "#ec4899",
       "icon": "box",
       "fields": [
