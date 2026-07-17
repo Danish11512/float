@@ -49,6 +49,15 @@
         { "name": "retry_policy", "type": "string", "required": false }
       ]
     },
+    "repository": {
+      "label": "Repository",
+      "description": "Data access layer. Thin GRDB wrapper for a table group. Sits between services and database storage.",
+      "color": "#c084fc",
+      "icon": "layers",
+      "fields": [
+        { "name": "tables", "type": "string", "required": false }
+      ]
+    },
     "model": {
       "label": "Domain Model",
       "description": "Shared data entity. Sendable struct. Flows between services and database.",

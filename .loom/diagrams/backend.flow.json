@@ -1,0 +1,324 @@
+{
+  "version": "1",
+  "id": "backend",
+  "title": "floats — Backend Internals",
+  "description": "On-device backend. Sync pipeline fetches from platform connectors, processes raw data into person profiles, purges temporaries. Data access layer splits persistent vs raw repositories, backed by GRDB. Domain models define the data contract. All local, SQLite/GRDB.",
+  "nodes": [
+    {
+      "id": "sync-engine",
+      "type": "sync-service",
+      "label": "Sync Engine",
+      "status": "planned",
+      "position": {
+        "x": 528.8881185823827,
+        "y": 160.83651084767118
+      },
+      "description": "Orchestrates the fetch → process → purge cycle. Iterates registered platform connectors, inserts raw data, then triggers ProfileBuilder and PurgeService.",
+      "code_refs": [
+        {
+          "path": "Sources/Core/Sync/SyncEngine.swift"
+        }
+      ],
+      "properties": {
+        "schedule": "BGAppRefreshTask (system-managed, 15 min min)",
+        "retry_policy": "exponential backoff, max 6 attempts"
+      }
+    },
+    {
+      "id": "profile-builder",
+      "type": "service",
+      "label": "Profile Builder",
+      "status": "planned",
+      "position": {
+        "x": 502.4073432151986,
+        "y": 355.37236032884454
+      },
+      "description": "Raw → profile transform. Matches raw accounts to persons via platform_handle, groups messages by person + time window into conversation entries, extracts topics, updates last_contacted_at on reminders.",
+      "code_refs": [
+        {
+          "path": "Sources/Core/Processing/ProfileBuilder.swift"
+        }
+      ],
+      "properties": {
+        "domain": "processing",
+        "responsibilities": "account matching, conversation grouping, topic extraction, reminder updates"
+      }
+    },
+    {
+      "id": "purge-service",
+      "type": "service",
+      "label": "Purge Service",
+      "status": "planned",
+      "position": {
+        "x": 796.3889851772021,
+        "y": 352.965017113646
+      },
+      "description": "Deletes processed raw data after ProfileBuilder completes. Raw data lives only between fetch and processing — typically seconds. Ensures raw tables never accumulate.",
+      "code_refs": [
+        {
+          "path": "Sources/Core/Sync/PurgeService.swift"
+        }
+      ],
+      "properties": {
+        "domain": "cleanup",
+        "responsibilities": "delete processed raw_message + raw_account rows"
+      }
+    },
+    {
+      "id": "platform-connectors",
+      "type": "external-api",
+      "label": "Platform Connectors",
+      "status": "planned",
+      "position": {
+        "x": 658.4709286090296,
+        "y": -61.594275461271735
+      },
+      "description": "Protocol-based platform fetchers. One protocol, multiple implementations: iMessage (Messages framework), WhatsApp (chat export import), Instagram (data export JSON), Manual entry.",
+      "code_refs": [
+        {
+          "path": "Sources/Core/Networking/Connectors/PlatformConnector.swift"
+        },
+        {
+          "path": "Sources/Core/Networking/Connectors/IMessageConnector.swift"
+        },
+        {
+          "path": "Sources/Core/Networking/Connectors/WhatsAppConnector.swift"
+        },
+        {
+          "path": "Sources/Core/Networking/Connectors/InstagramConnector.swift"
+        },
+        {
+          "path": "Sources/Core/Networking/Connectors/ManualEntryConnector.swift"
+        }
+      ],
+      "properties": {
+        "url": "on-device: Messages framework, file imports",
+        "auth": "platform-specific"
+      }
+    },
+    {
+      "id": "persistent-repo",
+      "type": "repository",
+      "label": "Persistent Repository",
+      "status": "planned",
+      "position": {
+        "x": 478.14339792469355,
+        "y": 628.7963283924007
+      },
+      "description": "Data access for persistent tables. Source of truth for person profiles, conversation entries, tags, reminders. Written by ProfileBuilder, read by API Gateway and feature services.",
+      "code_refs": [
+        {
+          "path": "Sources/Repositories/PersonRepository.swift"
+        },
+        {
+          "path": "Sources/Repositories/ConversationRepository.swift"
+        },
+        {
+          "path": "Sources/Repositories/TagRepository.swift"
+        },
+        {
+          "path": "Sources/Repositories/ReminderRepository.swift"
+        }
+      ],
+      "properties": {
+        "tables": "person, platform_handle, conversation_entry, tag, person_tag, reminder"
+      }
+    },
+    {
+      "id": "raw-data-repo",
+      "type": "repository",
+      "label": "Raw Data Repository",
+      "status": "planned",
+      "position": {
+        "x": 780.6459977091519,
+        "y": 629.9999999999999
+      },
+      "description": "Data access for temporary tables. Written by SyncEngine, read by ProfileBuilder, purged by PurgeService. Raw data never reaches the UI layer.",
+      "code_refs": [
+        {
+          "path": "Sources/Repositories/RawDataRepository.swift"
+        }
+      ],
+      "properties": {
+        "tables": "raw_message, raw_account"
+      }
+    },
+    {
+      "id": "database-manager",
+      "type": "database",
+      "label": "Database Manager",
+      "status": "planned",
+      "position": {
+        "x": 500,
+        "y": 830
+      },
+      "description": "GRDB wrapper + schema migrations. Provides DatabaseQueue/DatabasePool to repositories. Foundation layer — all repos read/write through this.",
+      "code_refs": [
+        {
+          "path": "Sources/Core/Database/DatabaseManager.swift"
+        }
+      ],
+      "properties": {
+        "engine": "sqlite",
+        "tables": "person, platform_handle, conversation_entry, tag, person_tag, reminder, raw_message, raw_account"
+      }
+    },
+    {
+      "id": "domain-models",
+      "type": "model",
+      "label": "Domain Models",
+      "status": "planned",
+      "position": {
+        "x": 500,
+        "y": 1030
+      },
+      "description": "Sendable structs. Person, PlatformHandle, ConversationEntry, Tag, Reminder (persistent). RawMessage, RawAccount (temporary). PersonCard (aggregate for UI).",
+      "code_refs": [
+        {
+          "path": "Sources/Models/Person.swift"
+        },
+        {
+          "path": "Sources/Models/PlatformHandle.swift"
+        },
+        {
+          "path": "Sources/Models/ConversationEntry.swift"
+        },
+        {
+          "path": "Sources/Models/Tag.swift"
+        },
+        {
+          "path": "Sources/Models/Reminder.swift"
+        },
+        {
+          "path": "Sources/Models/RawMessage.swift"
+        },
+        {
+          "path": "Sources/Models/RawAccount.swift"
+        },
+        {
+          "path": "Sources/Models/PersonCard.swift"
+        }
+      ],
+      "properties": {
+        "properties": "Person, PlatformHandle, ConversationEntry, Tag, Reminder, RawMessage, RawAccount, PersonCard"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "sync-engine",
+      "to": "platform-connectors",
+      "kind": "request",
+      "label": "fetch messages + accounts"
+    },
+    {
+      "id": "e2",
+      "from": "sync-engine",
+      "to": "raw-data-repo",
+      "kind": "data-write",
+      "label": "insert raw data"
+    },
+    {
+      "id": "e3",
+      "from": "sync-engine",
+      "to": "profile-builder",
+      "kind": "control",
+      "label": "trigger processing"
+    },
+    {
+      "id": "e4",
+      "from": "sync-engine",
+      "to": "purge-service",
+      "kind": "control",
+      "label": "trigger purge"
+    },
+    {
+      "id": "e5",
+      "from": "profile-builder",
+      "to": "raw-data-repo",
+      "kind": "data-read",
+      "label": "read unprocessed raw"
+    },
+    {
+      "id": "e6",
+      "from": "profile-builder",
+      "to": "persistent-repo",
+      "kind": "data-write",
+      "label": "upsert persons + conversations"
+    },
+    {
+      "id": "e7",
+      "from": "purge-service",
+      "to": "raw-data-repo",
+      "kind": "data-write",
+      "label": "delete processed rows"
+    },
+    {
+      "id": "e8",
+      "from": "persistent-repo",
+      "to": "database-manager",
+      "kind": "dependency",
+      "label": "GRDB access"
+    },
+    {
+      "id": "e9",
+      "from": "raw-data-repo",
+      "to": "database-manager",
+      "kind": "dependency",
+      "label": "GRDB access"
+    },
+    {
+      "id": "e10",
+      "from": "database-manager",
+      "to": "domain-models",
+      "kind": "data-read",
+      "label": "map records to domain structs"
+    }
+  ],
+  "groups": [
+    {
+      "id": "sync-pipeline",
+      "label": "Sync Pipeline",
+      "color": "#f97316",
+      "children": [
+        "sync-engine",
+        "profile-builder",
+        "purge-service"
+      ]
+    },
+    {
+      "id": "platform-connectors-group",
+      "label": "Platform Connectors",
+      "color": "#94a3b8",
+      "children": [
+        "platform-connectors"
+      ]
+    },
+    {
+      "id": "data-access",
+      "label": "Data Access Layer",
+      "color": "#c084fc",
+      "children": [
+        "persistent-repo",
+        "raw-data-repo"
+      ]
+    },
+    {
+      "id": "storage",
+      "label": "Storage",
+      "color": "#a78bfa",
+      "children": [
+        "database-manager"
+      ]
+    },
+    {
+      "id": "domain-models-group",
+      "label": "Domain Models",
+      "color": "#ec4899",
+      "children": [
+        "domain-models"
+      ]
+    }
+  ]
+}

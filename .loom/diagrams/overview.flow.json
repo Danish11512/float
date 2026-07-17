@@ -2,7 +2,7 @@
   "version": "1",
   "id": "overview",
   "title": "floats — Service Architecture",
-  "description": "Service-oriented vertical stack. API Gateway on top, services stacked vertically, database at bottom. Services reach out horizontally to external APIs.",
+  "description": "Service-oriented vertical stack. API Gateway on top, Feature Services + Backend (drill-down for internals) in the middle, models at bottom. Backend reaches out horizontally to external platform APIs.",
   "nodes": [
     {
       "id": "api-gateway",
@@ -10,54 +10,56 @@
       "label": "API Gateway",
       "status": "planned",
       "position": { "x": 400, "y": 50 },
-      "description": "Top-level entry point. Routes UI requests to appropriate services. Single access point for all features.",
-      "properties": { "endpoints": "TBD — defined per feature" }
+      "description": "Top-level entry point. Routes UI requests to the backend. Single access point for all features.",
+      "code_refs": [{ "path": "Sources/Core/AppRouter.swift" }],
+      "properties": { "endpoints": "getPersons, getPerson, getOverduePersons, updateNotes, addTag, removeTag, setReminder, logContact, addManualConversation, triggerSync" }
     },
     {
-      "id": "sync-service",
-      "type": "sync-service",
-      "label": "Sync Service",
+      "id": "reminder-service",
+      "type": "service",
+      "label": "Reminder Service",
+      "status": "planned",
+      "position": { "x": 700, "y": 50 },
+      "description": "Feature service. Cadence + overdue logic. Recomputes next_reminder_at from last_contacted_at + cadence_days. Reads/writes reminders via backend persistent repo.",
+      "code_refs": [{ "path": "Sources/Features/Reminders/ReminderService.swift" }],
+      "properties": { "domain": "reminders", "responsibilities": "recompute next reminders, query overdue" }
+    },
+    {
+      "id": "backend",
+      "type": "service",
+      "label": "Backend",
       "status": "planned",
       "position": { "x": 400, "y": 300 },
-      "description": "Background fetch / cron updater. Runs on BGAppRefreshTask schedule. Reaches out horizontally to external APIs, writes down to database.",
-      "properties": { "schedule": "BGAppRefreshTask (system-managed, 15 min min)", "retry_policy": "exponential backoff, max 6 attempts" }
-    },
-    {
-      "id": "database",
-      "type": "database",
-      "label": "SQLite Database (GRDB)",
-      "status": "planned",
-      "position": { "x": 400, "y": 550 },
-      "description": "Foundation layer. On-device persistence via GRDB.swift. All services read/write here. Source of truth for offline-first.",
-      "properties": { "engine": "sqlite", "tables": "TBD — defined per feature" }
+      "description": "On-device backend. Sync engine, profile builder, purge service, repositories, and SQLite storage. Drill down for internal architecture.",
+      "drill_down": "backend",
+      "properties": { "domain": "data processing + persistence", "responsibilities": "sync from platforms, process raw data into person profiles, purge temp data" }
     },
     {
       "id": "external-api",
       "type": "external-api",
-      "label": "External API",
+      "label": "Platform APIs",
       "status": "planned",
       "position": { "x": 900, "y": 175 },
-      "description": "Remote third-party or backend API. Reached horizontally by API gateway + sync service. URLSession + async/await.",
-      "properties": { "url": "TBD", "auth": "TBD" }
+      "description": "Platform connectors reached horizontally by the backend sync engine. iMessage (Messages framework), WhatsApp (chat export), Instagram (data export), Manual entry.",
+      "properties": { "url": "on-device: Messages framework, file imports", "auth": "platform-specific" }
     },
     {
       "id": "model",
       "type": "model",
       "label": "Domain Models",
       "status": "planned",
-      "position": { "x": 400, "y": 750 },
-      "description": "Shared Sendable structs. Flow between database, services, and API gateway. Define the data contract across layers.",
+      "position": { "x": 400, "y": 550 },
+      "description": "Shared Sendable structs. Flow between backend and API gateway. Define the data contract across layers.",
       "properties": { "properties": "TBD — defined per feature" }
     }
   ],
   "edges": [
-    { "id": "e1", "from": "api-gateway", "to": "sync-service", "kind": "control", "label": "trigger sync" },
-    { "id": "e2", "from": "sync-service", "to": "database", "kind": "data-write", "label": "persist fetched data" },
-    { "id": "e3", "from": "sync-service", "to": "external-api", "kind": "request", "label": "scheduled fetch" },
-    { "id": "e4", "from": "api-gateway", "to": "external-api", "kind": "request", "label": "on-demand fetch" },
-    { "id": "e5", "from": "api-gateway", "to": "database", "kind": "data-read", "label": "read local data" },
-    { "id": "e6", "from": "database", "to": "model", "kind": "data-read", "label": "map records to domain" },
-    { "id": "e7", "from": "external-api", "to": "model", "kind": "data-read", "label": "decode response to domain" },
-    { "id": "e8", "from": "api-gateway", "to": "model", "kind": "data-read", "label": "return domain types to UI" }
+    { "id": "e1", "from": "api-gateway", "to": "backend", "kind": "control", "label": "trigger sync + read data" },
+    { "id": "e2", "from": "api-gateway", "to": "reminder-service", "kind": "request", "label": "get overdue persons" },
+    { "id": "e3", "from": "reminder-service", "to": "backend", "kind": "request", "label": "read + update reminders" },
+    { "id": "e4", "from": "backend", "to": "external-api", "kind": "request", "label": "fetch from platforms" },
+    { "id": "e5", "from": "external-api", "to": "backend", "kind": "data-write", "label": "raw data to sync pipeline" },
+    { "id": "e6", "from": "backend", "to": "model", "kind": "data-read", "label": "map to domain structs" },
+    { "id": "e7", "from": "api-gateway", "to": "model", "kind": "data-read", "label": "return domain types to UI" }
   ]
 }
