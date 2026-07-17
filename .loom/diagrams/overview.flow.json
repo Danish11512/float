@@ -9,6 +9,7 @@
       "type": "view",
       "label": "SwiftUI Views",
       "status": "planned",
+      "position": { "x": 80, "y": 100 },
       "description": "Presentation layer. Renders state from ViewModel, sends user intents back.",
       "properties": { "screen": "ContentView + feature views" }
     },
@@ -17,6 +18,7 @@
       "type": "viewmodel",
       "label": "ViewModels",
       "status": "planned",
+      "position": { "x": 380, "y": 100 },
       "description": "@Observable view models. Hold UI state, call repository, never touch network/DB directly.",
       "properties": { "state": "@Observable, @MainActor" }
     },
@@ -25,6 +27,7 @@
       "type": "repository",
       "label": "Repository Layer",
       "status": "planned",
+      "position": { "x": 680, "y": 100 },
       "description": "Data access abstraction. Decides local vs remote. Writes local first (offline-first).",
       "properties": { "entities": "Feature-specific repositories" }
     },
@@ -33,22 +36,25 @@
       "type": "database",
       "label": "SQLite Database (GRDB)",
       "status": "planned",
+      "position": { "x": 980, "y": 50 },
       "description": "On-device persistence via GRDB.swift. Source of truth for offline-first.",
       "properties": { "engine": "sqlite", "tables": "TBD — defined per feature" }
     },
     {
-      "id": "sync_engine",
-      "type": "sync_engine",
+      "id": "sync-engine",
+      "type": "sync-engine",
       "label": "Sync Engine",
       "status": "planned",
+      "position": { "x": 980, "y": 300 },
       "description": "Background fetch task (BGAppRefreshTask). Pulls remote data on schedule, writes to local DB. Exponential backoff retry.",
       "properties": { "schedule": "BGAppRefreshTask (system-managed)", "retry_policy": "exponential backoff, max 6 attempts" }
     },
     {
-      "id": "api_client",
-      "type": "api_client",
+      "id": "api-client",
+      "type": "api-client",
       "label": "API Client",
       "status": "planned",
+      "position": { "x": 1280, "y": 175 },
       "description": "URLSession + async/await. Handles remote fetch for sync engine + repository.",
       "properties": { "base_url": "TBD" }
     },
@@ -57,6 +63,7 @@
       "type": "model",
       "label": "Domain Models",
       "status": "planned",
+      "position": { "x": 1580, "y": 175 },
       "description": "Sendable structs. Shared across layers. DB records map to these.",
       "properties": { "properties": "TBD — defined per feature" }
     }
@@ -66,10 +73,10 @@
     { "id": "e2", "from": "viewmodel", "to": "view", "kind": "data-read", "label": "observed state" },
     { "id": "e3", "from": "viewmodel", "to": "repository", "kind": "request", "label": "fetch/save" },
     { "id": "e4", "from": "repository", "to": "database", "kind": "data-write", "label": "local read/write" },
-    { "id": "e5", "from": "repository", "to": "api_client", "kind": "request", "label": "remote fetch (on-demand)" },
-    { "id": "e6", "from": "sync_engine", "to": "api_client", "kind": "request", "label": "scheduled fetch" },
-    { "id": "e7", "from": "sync_engine", "to": "database", "kind": "data-write", "label": "persist update" },
-    { "id": "e8", "from": "api_client", "to": "model", "kind": "data-read", "label": "decode response" },
+    { "id": "e5", "from": "repository", "to": "api-client", "kind": "request", "label": "remote fetch (on-demand)" },
+    { "id": "e6", "from": "sync-engine", "to": "api-client", "kind": "request", "label": "scheduled fetch" },
+    { "id": "e7", "from": "sync-engine", "to": "database", "kind": "data-write", "label": "persist update" },
+    { "id": "e8", "from": "api-client", "to": "model", "kind": "data-read", "label": "decode response" },
     { "id": "e9", "from": "database", "to": "model", "kind": "data-read", "label": "map records" },
     { "id": "e10", "from": "repository", "to": "model", "kind": "data-read", "label": "return domain types" }
   ]

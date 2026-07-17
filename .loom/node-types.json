@@ -37,7 +37,7 @@
         { "name": "tables", "type": "string", "required": false }
       ]
     },
-    "sync_engine": {
+    "sync-engine": {
       "label": "Sync Engine",
       "description": "Background fetch / cron updater with retry + backoff.",
       "color": "#f97316",
@@ -47,7 +47,7 @@
         { "name": "retry_policy", "type": "string", "required": false }
       ]
     },
-    "api_client": {
+    "api-client": {
       "label": "API Client",
       "description": "Remote HTTP client (URLSession + async/await).",
       "color": "#94a3b8",
