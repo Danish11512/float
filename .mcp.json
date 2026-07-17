@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "loom-spec": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "loom-spec",
+        "mcp"
+      ]
+    }
+  }
+}
