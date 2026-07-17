@@ -1,55 +1,68 @@
 {
   "types": {
-    "ui": {
-      "label": "UI Component",
-      "description": "User-facing component (page, view, widget).",
+    "view": {
+      "label": "SwiftUI View",
+      "description": "User-facing screen or component (SwiftUI).",
       "color": "#60a5fa",
       "icon": "monitor",
       "fields": [
-        { "name": "framework", "type": "string", "required": false }
+        { "name": "screen", "type": "string", "required": false }
       ]
     },
-    "service": {
-      "label": "Service",
-      "description": "Backend service, API, or business-logic module.",
+    "viewmodel": {
+      "label": "ViewModel",
+      "description": "State management + business logic (@Observable).",
       "color": "#34d399",
-      "icon": "server",
+      "icon": "cpu",
       "fields": [
-        { "name": "language", "type": "string", "required": false },
-        { "name": "runtime", "type": "string", "required": false }
+        { "name": "state", "type": "string", "required": false }
       ]
     },
-    "data": {
-      "label": "Data Store",
-      "description": "Persistent or cached data location.",
+    "repository": {
+      "label": "Repository",
+      "description": "Data access abstraction (local + remote).",
+      "color": "#fbbf24",
+      "icon": "database",
+      "fields": [
+        { "name": "entities", "type": "string", "required": false }
+      ]
+    },
+    "database": {
+      "label": "Local Database",
+      "description": "On-device persistence (SQLite via GRDB).",
       "color": "#a78bfa",
       "icon": "database",
       "fields": [
-        {
-          "name": "engine",
-          "type": "enum",
-          "values": ["postgres", "mysql", "sqlite", "redis", "s3", "file", "memory"],
-          "required": false
-        },
-        { "name": "ttl_seconds", "type": "number", "required": false }
+        { "name": "engine", "type": "enum", "values": ["sqlite", "swiftdata", "coredata", "file", "memory"], "required": false },
+        { "name": "tables", "type": "string", "required": false }
       ]
     },
-    "event": {
-      "label": "Event",
-      "description": "Asynchronous message or domain event.",
-      "color": "#fbbf24",
-      "icon": "zap",
+    "sync_engine": {
+      "label": "Sync Engine",
+      "description": "Background fetch / cron updater with retry + backoff.",
+      "color": "#f97316",
+      "icon": "refresh-cw",
       "fields": [
-        { "name": "channel", "type": "string", "required": false }
+        { "name": "schedule", "type": "string", "required": false },
+        { "name": "retry_policy", "type": "string", "required": false }
       ]
     },
-    "external": {
-      "label": "External System",
-      "description": "Third-party service or system outside this codebase.",
+    "api_client": {
+      "label": "API Client",
+      "description": "Remote HTTP client (URLSession + async/await).",
       "color": "#94a3b8",
       "icon": "globe",
       "fields": [
-        { "name": "url", "type": "string", "required": false }
+        { "name": "base_url", "type": "string", "required": false }
+      ]
+    },
+    "model": {
+      "label": "Domain Model",
+      "description": "Core data entity (Sendable struct).",
+      "color": "#ec4899",
+      "icon": "box",
+      "fields": [
+        { "name": "properties", "type": "string", "required": false }
       ]
     }
   }
