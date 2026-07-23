@@ -1,0 +1,9 @@
+{
+  "skill": "architecture-docs",
+  "version": "0.3.0",
+  "agent": "windsurf",
+  "scope": "project",
+  "checksum": "sha256:0abff6247f42fb79d922d044a91cfced124dad53767f2adc177c5546bf3e062a",
+  "installedAt": "2026-07-22T23:13:33.211Z",
+  "installer": "@tecture/skill"
+}
